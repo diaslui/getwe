@@ -1,11 +1,11 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { createJob, getJob, deleteJob, updateJob } from "./storage.js";
+import { createJob, getJob, deleteJob, updateJob } from "./storage.ts";
 import {
   ytdlpService,
   type VideoInfo,
   type DownloadProgress,
-} from "../ytdlp/index.js";
+} from "../ytdlp/index.ts";
 
 const routes = Router();
 
