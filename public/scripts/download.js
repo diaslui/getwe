@@ -46,8 +46,25 @@ const renderSingleVideoFormats = (formats) => {
   const container = domRefs.singleVideoQualityList;
 
   const validFormats = formats
-    .filter((f) => f.filesize && f.label)
-    .sort((a, b) => a.filesize - b.filesize);
+    .filter((f) => f.label)
+    .sort((a, b) => {
+      const heightDiff = (b.height || 0) - (a.height || 0);
+      if (heightDiff !== 0) return heightDiff;
+      return (b.filesize || 0) - (a.filesize || 0);
+    });
+
+  if (validFormats.length === 0) {
+    container.innerHTML = `
+      <div class="col-span-full text-center text-itp-gray-500 dark:text-itp-gray-400 py-4">
+        Nenhum formato de vídeo disponível
+      </div>
+    `;
+    return;
+  }
+
+  if (!selectedQuality && validFormats.length > 0) {
+    selectedQuality = validFormats[0].formatId;
+  }
 
   container.innerHTML = validFormats
     .map(
@@ -60,7 +77,8 @@ const renderSingleVideoFormats = (formats) => {
           : ""
       }">
       <div class="font-semibold text-itp-gray-900 dark:text-white mb-1">${format.label}</div>
-      <div class="text-sm text-itp-gray-500 dark:text-itp-gray-400">${formatBytes(format.filesize)}</div>
+      <div class="text-xs text-itp-gray-400 dark:text-itp-gray-500 mb-1">${format.ext?.toUpperCase() || 'MP4'}${format.fps ? ` • ${format.fps}fps` : ''}</div>
+      <div class="text-sm text-itp-gray-500 dark:text-itp-gray-400">${format.filesize ? formatBytes(format.filesize) : 'Tamanho variável'}</div>
     </button>
   `,
     )
@@ -78,20 +96,38 @@ const renderSingleAudioFormats = (audioFormats) => {
   const container = domRefs.singleAudioQualityList;
 
   const validFormats = audioFormats
-    .filter(
-      (f) =>
-        (f.ext === "m4a" || f.ext === "webm") &&
-        !f.formatId.includes("drc") &&
-        f.bitrate > 0,
-    )
-    .sort((a, b) => a.bitrate - b.bitrate);
+    .filter((f) => f.bitrate && f.bitrate > 0 && !f.formatId.includes("drc"))
+    .sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
 
-  container.innerHTML = ` <button 
-      data-format-id="mp3"
+  let html = validFormats
+    .map(
+      (format) => `
+    <button 
+      data-format-id="${format.formatId}"
+      data-ext="${format.ext}"
       class="audio-quality-btn p-4 border-2 border-itp-gray-200 dark:border-itp-gray-600 rounded-lg hover:border-itp-red transition-colors text-left">
-      <div class="font-semibold text-itp-gray-900 dark:text-white mb-1">MP3</div>
-      <div class="text-sm text-itp-gray-500 dark:text-itp-gray-400">não estimado</div>
-    </button>`;
+      <div class="font-semibold text-itp-gray-900 dark:text-white mb-1">${format.quality}</div>
+      <div class="text-xs text-itp-gray-400 dark:text-itp-gray-500 mb-1">${format.ext?.toUpperCase() || 'AUDIO'} • ${format.acodec || 'codec'}</div>
+      <div class="text-sm text-itp-gray-500 dark:text-itp-gray-400">${format.filesize ? formatBytes(format.filesize) : 'Tamanho variável'}</div>
+    </button>
+  `,
+    )
+    .join("");
+
+  html += `
+    <button 
+      data-format-id="bestaudio"
+      data-ext="mp3"
+      data-convert="mp3"
+      class="audio-quality-btn p-4 border-2 border-itp-gray-200 dark:border-itp-gray-600 rounded-lg hover:border-itp-red transition-colors text-left">
+      <div class="font-semibold text-itp-gray-900 dark:text-white mb-1">MP3 (Convertido)</div>
+      <div class="text-xs text-itp-gray-400 dark:text-itp-gray-500 mb-1">Melhor qualidade convertida</div>
+      <div class="text-sm text-itp-gray-500 dark:text-itp-gray-400">Tamanho variável</div>
+    </button>
+  `;
+
+  container.innerHTML = html;
+
   container.querySelectorAll(".audio-quality-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       const formatId = e.currentTarget.dataset.formatId;
@@ -237,31 +273,67 @@ const redirect = (url) => {
 };
 
 const startDownload = async () => {
-  const downloadConfig = {
-    mode: downloadData.mode,
-    format: selectedFormat,
-    quality: selectedQuality,
-    videos: downloadData.videos,
-  };
+  const isAudio = selectedFormat === "audio" || selectedFormat === "mp3";
+  const outputType = isAudio ? "audio" : "video";
+  
+  let audioFormat = null;
+  let outputFormat = isAudio ? "mp3" : "mp4";
+  
+  if (isAudio) {
+    const selectedBtn = document.querySelector(`.audio-quality-btn[data-format-id="${selectedQuality}"]`);
+    if (selectedBtn) {
+      const convert = selectedBtn.dataset.convert;
+      const ext = selectedBtn.dataset.ext;
+      if (convert) {
+        audioFormat = convert;
+        outputFormat = convert;
+      } else if (ext) {
+        outputFormat = ext;
+      }
+    }
+  }
 
   showLoader("Criando solicitação de download...");
-  const response = await fetch("/api/download/create", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      urls: downloadData.videos.map((v) => v.url),
-      outputType: "video",
-      outputFormat: selectedFormat,
-    }),
-  });
+  
+  try {
+    const response = await fetch("/api/download/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        urls: downloadData.videos.map((v) => v.url),
+        outputType: outputType,
+        outputFormat: outputFormat,
+        formatId: selectedQuality || null,
+      }),
+    });
 
-  const data = await response.json();
-  showLoader("Redirecionando para a página de download...");
-  showToast("Você será redirecionado para a página de download.");
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Erro ao criar download");
+    }
 
-  redirect(`/job/${data.jobId}`);
+    const data = await response.json();
+    
+    const videoInfo = downloadData.videos[0];
+    if (videoInfo) {
+      localStorage.setItem("lastDownloadInfo", JSON.stringify({
+        title: videoInfo.title || "Vídeo",
+        thumbnail: videoInfo.thumbnail || "",
+        format: outputFormat,
+        duration: videoInfo.duration || 0,
+      }));
+    }
+
+    showLoader("Redirecionando para a página de download...");
+    showToast("Você será redirecionado para a página de download.");
+
+    redirect(`/job/${data.jobId}`);
+  } catch (error) {
+    hideLoader();
+    showToast(error.message || "Erro ao iniciar download", "error");
+  }
 };
 
 const include1fListeners = async () => {

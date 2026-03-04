@@ -46,6 +46,10 @@
                         Conectando ao servidor...
                     </p>
 
+                    <p id="statusInfo" class="text-itp-gray-600 dark:text-itp-gray-300 text-sm font-medium">
+                        Preparando...
+                    </p>
+
                     <div class="w-full h-1.5 bg-itp-gray-200 dark:bg-itp-gray-700 rounded-full overflow-hidden">
                         <div id="linearProgress" class="h-full bg-itp-red rounded-full transition-all duration-300"
                             style="width: 0%"></div>
@@ -53,15 +57,21 @@
 
                     <div
                         class="flex items-center justify-center gap-4 text-sm text-itp-gray-500 dark:text-itp-gray-400">
-                        <span id="fileFormat" class="flex items-center gap-1">
+                        <span class="flex items-center gap-1">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    d="M13 10V3L4 14h7v7l9-11h-7z" />
                             </svg>
-                            MP4
+                            <span id="speedInfo">-- MB/s</span>
                         </span>
                         <span class="w-1 h-1 bg-itp-gray-400 rounded-full"></span>
-                        <span id="fileSize">~45 MB</span>
+                        <span class="flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span id="etaInfo">--:--</span>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -107,13 +117,13 @@
 
                 <div class="w-full max-w-md space-y-3 fade-in">
 
-                    <button 
+                    <button id="retryDownloadBtn"
                         class="w-full py-3 px-6 bg-itp-gray-100 dark:bg-itp-gray-700 hover:bg-itp-gray-200 dark:hover:bg-itp-gray-600 text-itp-gray-900 dark:text-white font-medium rounded-full transition-colors flex items-center justify-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
-                        Download nao iniciou? Clique aqui
+                        Download não iniciou? Clique aqui
                     </button>
 
                     <a href="/"
